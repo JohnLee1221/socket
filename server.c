@@ -7,95 +7,83 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define SERVER_PORT 8888
+#define BUFF_LEN 1024
+
 struct USERINFO
 {
 	uint32_t age;
 	uint32_t score;
 };
 
-int main(void)
+void handle_udp_msg(int fd)
 {
-	
-	int server_sockfd;										//服务器端套接字
-	int client_sockfd;										//客户端套接字
-	int len;
+	struct USERINFO userInfo;					//实例化一个结构体
+	memset(&userInfo, 0, sizeof(userInfo));	
+
+    char buf[BUFF_LEN];  						//接收缓冲区，1024字节
+
+    socklen_t len;
+    int count;
+
+    struct sockaddr_in clent_addr;  			//clent_addr用于记录发送方的地址信息
+    while(1)
+    {
+        len = sizeof(clent_addr);
+
+        count = recvfrom(fd, buf, BUFF_LEN, 0, (struct sockaddr*)&clent_addr, &len);  //recvfrom是拥塞函数，没有数据就一直拥塞
+        if(count == -1)
+        {
+            printf("recieve data fail!\n");
+            return;
+        }
+
+		memcpy(&userInfo, buf,sizeof(userInfo));
+
+		printf("******************************\n");
+        printf("client:\t%d\t%d\n",userInfo.age,userInfo.score);  //打印client发过来的信息
+
+        memset(buf, 0, BUFF_LEN);
+
+        // sprintf(buf, "I have recieved %d bytes data!\n", count);  //回复client
+        // printf("server:%s\n",buf);  //打印自己发送的信息给
+        // sendto(fd, buf, BUFF_LEN, 0, (struct sockaddr*)&clent_addr, len);  //发送信息给client，注意使用了clent_addr结构体指针
+
+    }
+}
 
 
-	struct sockaddr_in my_addr;   							//服务器网络地址结构体
-	struct sockaddr_in remote_addr; 						//客户端网络地址结构体
-	memset(&my_addr,0,sizeof(my_addr)); 					//初始化
-	my_addr.sin_family=AF_INET; 							//设置为IP通信
-	my_addr.sin_addr.s_addr=INADDR_ANY;						//允许连接到所有本地地址上
-	my_addr.sin_port=htons(8192); 							//服务器端口号
+/*
+    server:
+            socket-->bind-->recvfrom-->sendto-->close
+*/
 
+int main(int argc, char* argv[])
+{
+    int server_fd, ret;
+    struct sockaddr_in ser_addr; 
 
+    server_fd = socket(AF_INET, SOCK_DGRAM, 0); //AF_INET:IPV4;SOCK_DGRAM:UDP
+    if(server_fd < 0)
+    {
+        printf("create socket fail!\n");
+        return -1;
+    }
 
-	int sin_size;
+    memset(&ser_addr, 0, sizeof(ser_addr));
+    ser_addr.sin_family = AF_INET;
+    ser_addr.sin_addr.s_addr = htonl(INADDR_ANY); //IP地址，需要进行网络序转换，INADDR_ANY：本地地址
+    ser_addr.sin_port = htons(SERVER_PORT);  //端口号，需要网络序转换
 
-	char recvMsg[1024];										//接收结构体数据
-	struct USERINFO userInfo;
-	memset(&userInfo, 0, sizeof(userInfo));					//执行初始化工作
+    ret = bind(server_fd, (struct sockaddr*)&ser_addr, sizeof(ser_addr));
+    if(ret < 0)
+    {
+        printf("socket bind fail!\n");
+        return -1;
+    }
 
+    handle_udp_msg(server_fd);   //处理接收到的数据
 
-	
-	/*IPv4协议，TCP协议*/
-	if((server_sockfd=socket(PF_INET,SOCK_STREAM,0))<0)
-	{  
-		perror("socket error");
-		return -1;
-	}
- 
-	/*将套接字绑定到服务器的网络地址上*/
-	if(bind(server_sockfd,(struct sockaddr *)&my_addr,sizeof(struct sockaddr))<0)
-	{
-		perror("bind error");
-		return -1;
-	}
-	
-	/*监听队列长度为10*/
-	if(listen(server_sockfd,10)<0)
-	{
-		perror("listen error");
-		return -1;
-	};
-	
-	sin_size=sizeof(struct sockaddr_in);
-	
-	/*等待客户端连接请求到达*/
-	if((client_sockfd=accept(server_sockfd,(struct sockaddr *)&remote_addr,(socklen_t*)&sin_size))<0)
-	{
-		perror("accept error");
-		return 1;
-	}
-	printf("accept client:%s\n",inet_ntoa(remote_addr.sin_addr));
-	len=send(client_sockfd,"Welcome to my server\n",21,0);//发送欢迎信息
-	
-	/*接收客户端的数据并将其发送给客户端--recv返回接收到的字节数，send返回发送的字节数*/
-	// while((len=recv(client_sockfd,buf,BUFSIZ,0))>0)
-	// int rs = recv(sock, recvMsg, 1024, 0);
-	while((len=recv(client_sockfd,recvMsg,1024,0))>0)
-	{
-		// buf[len]='\0';
-		// printf("%s\n",buf);
-
-		printf("*******************************\n");
-
-		recv(client_sockfd,recvMsg,1024,0);
-		memcpy(&userInfo, recvMsg,sizeof(userInfo));
-		printf("%d\n",userInfo.score);
-		printf("%d\n",userInfo.age);
-
-		// if(send(client_sockfd,buf,len,0)<0)
-		// {
-		// 	perror("write error");
-		// 	return -1;
-		// }
-	}
- 
- 
-	/*关闭套接字*/
-	close(client_sockfd);
-	close(server_sockfd);
-    
-	return 0;
+    close(server_fd);
+    return 0;
 }
