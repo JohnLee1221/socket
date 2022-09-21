@@ -4,6 +4,10 @@
         "ostream": "cpp",
         "unistd.h": "c",
         "stdio.h": "c",
-        "inet.h": "c"
+        "inet.h": "c",
+        "iostream": "cpp",
+        "chrono": "cpp",
+        "cstring": "cpp",
+        "functional": "cpp"
     }
 }
