@@ -2,7 +2,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <iostream>
+#include <fstream>
 #include <cstring>
+#include<time.h>
+#include<string>
 #include "Socket.h"
 #include "message.h"
 
@@ -46,6 +49,18 @@ void Socket::Socket_init()
 
 void Socket::Socket_recv()
 {
+    time_t currentTime=time(NULL);
+	char chCurrentTime[256];
+	strftime(chCurrentTime,sizeof(chCurrentTime),"%Y%m%d %H%M%S",localtime(&currentTime));      //年/月/日/时/分/秒
+    string stCurrentTime=chCurrentTime;
+    string filename="data"+stCurrentTime+".txt"; 
+
+    ofstream fout;
+	fout.open(filename.c_str());
+
+    fout<<"recieve data from client"<<endl;
+    fout<<"messageId\tmessageIdLength\tdataLengthCode\t\tdata"<<endl;
+
     while(true)
     {
         memset(buf, 0, BUFF_LEN);
@@ -53,7 +68,7 @@ void Socket::Socket_recv()
         len_ = sizeof(clent_addr);
         count = recvfrom(m_server_fd, buf, BUFF_LEN, 0, (struct sockaddr*)&clent_addr, &len_);  //recvfrom是拥塞函数，没有数据就一直拥塞
         if(count != -1)
-            cout<<"recieve data ready!"<<endl;
+            cout<<"recieve data ..."<<endl;
         else
         {
             cout<<"recieve data fail!"<<endl;
@@ -62,13 +77,6 @@ void Socket::Socket_recv()
 
         memcpy(&lxMessage, buf,sizeof(lxMessage));
 
-        cout<<"*****************************************"<<endl;
-        cout<<"recieve data of client times : "<<times_<<endl;
-        cout<<"lxMessage.messageId: \t\t"<<lxMessage.messageId<<endl;
-        cout<<"lxMessage.messageIdLength: \t"<<lxMessage.messageIdLength<<endl;
-        cout<<"lxMessage.dataLengthCode: \t"<<lxMessage.dataLengthCode<<endl;
-        cout<<"lxMessage.data: \t\t"<<lxMessage.data<<endl;
-
-        times_++;
+        fout<<lxMessage.messageId<<"\t\t"<<lxMessage.messageIdLength<<"\t\t\t"<<lxMessage.dataLengthCode<<"\t\t\t"<<lxMessage.data<<endl;
     }
 }

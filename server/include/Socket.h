@@ -20,8 +20,7 @@ public:
 public:
     char buf[BUFF_LEN];                     //接收缓冲区，1024字节
     int m_server_fd , count; 
-    // int SERVER_PORT;
-    int times_ = 1;    
+    // int SERVER_PORT;  
     uint16_t SERVER_PORT;                 
                     
     struct sockaddr_in m_ser_addr;
